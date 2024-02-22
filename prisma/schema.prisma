@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  name       String
+  password   String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  Home       Home?
+  About      About?
+}
+
+//HOME MODEL START HERE
+model Home {
+  id          Int    @id @default(autoincrement())
+  User        User   @relation(fields: [userId], references: [id])
+  userId      Int    @unique
+  logo_name   String
+  image       String
+  title       String
+  description String
+  copy_email  String @unique
+}
+
+//HOME MODEL END HERE
+
+//ABOUT MODEL START HERE
+model About {
+  id          Int       @id @default(autoincrement())
+  User        User?     @relation(fields: [user_id], references: [id])
+  user_id     Int       @unique
+  sub_title   String
+  title       String
+  description String
+  image       String
+  about_me    AboutMe[]
+}
+
+model AboutMe {
+  id                   Int     @id @default(autoincrement())
+  About                About?  @relation(fields: [about_id], references: [id])
+  about_id             Int?
+  about_me_title       String?
+  about_me_description String?
+}
+
+//ABOUT MODEL END HERE
+
+//LANGUAGES MODEL START HERE
+model Languages {
+  id             Int             @id @default(autoincrement())
+  subTitle       String
+  title          String
+  language_items LanguagesItem[]
+}
+
+model LanguagesItem {
+  id            Int        @id @default(autoincrement())
+  Languages     Languages? @relation(fields: [languages_id], references: [id])
+  languages_id  Int?
+  image         String
+  language_name String
+}
+
+//LANGUAGES MODEL END HERE
+
+//WHYME MODEL START HERE
+model whyMe {
+  id           Int          @id @default(autoincrement())
+  subTitle     String
+  title        String
+  why_me_items whyMeItems[]
+}
+
+model whyMeItems {
+  id          Int    @id @default(autoincrement())
+  whyMe       whyMe? @relation(fields: [why_me_id], references: [id])
+  why_me_id   Int?
+  image       String
+  title       String
+  description String
+}
+
+//WHYME MODEL END HERE
+
+//WORK MODEL START HERE
+model Work {
+  id         Int         @id @default(autoincrement())
+  subtitle   String
+  title      String
+  work_links String
+  work_items workItems[]
+}
+
+model workItems {
+  id          Int    @id @default(autoincrement())
+  Work        Work?  @relation(fields: [workId], references: [id])
+  workId      Int?
+  image       String
+  title       String
+  sub_title   String
+  description String
+}
+
+//WORK MODEL END HERE
+
+//MORE MODEL START HERE
+model More {
+  id        Int    @id @default(autoincrement())
+  title     String
+  sub_title String
+  links     String
+}
+
+//MORE MODEL END HERE
