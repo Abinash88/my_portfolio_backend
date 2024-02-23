@@ -11,21 +11,25 @@ datasource db {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
+  id         Int        @id @default(autoincrement())
+  email      String     @unique
   name       String
-  password   String   @unique
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  password   String     @unique
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
   Home       Home?
   About      About?
+  languages  Languages?
+  work       Work?
+  More       More?
+  whyMe      whyMe?
 }
 
 //HOME MODEL START HERE
 model Home {
   id          Int    @id @default(autoincrement())
-  User        User   @relation(fields: [userId], references: [id])
-  userId      Int    @unique
+  User        User   @relation(fields: [user_id], references: [id])
+  user_id     Int    @unique
   logo_name   String
   image       String
   title       String
@@ -38,7 +42,7 @@ model Home {
 //ABOUT MODEL START HERE
 model About {
   id          Int       @id @default(autoincrement())
-  User        User?     @relation(fields: [user_id], references: [id])
+  User        User      @relation(fields: [user_id], references: [id])
   user_id     Int       @unique
   sub_title   String
   title       String
@@ -63,6 +67,8 @@ model Languages {
   subTitle       String
   title          String
   language_items LanguagesItem[]
+  User           User            @relation(fields: [user_id], references: [id])
+  user_id        Int             @unique
 }
 
 model LanguagesItem {
@@ -81,6 +87,8 @@ model whyMe {
   subTitle     String
   title        String
   why_me_items whyMeItems[]
+  User         User         @relation(fields: [user_id], references: [id])
+  user_id      Int          @unique
 }
 
 model whyMeItems {
@@ -101,6 +109,8 @@ model Work {
   title      String
   work_links String
   work_items workItems[]
+  User       User        @relation(fields: [user_id], references: [id])
+  user_id    Int         @unique
 }
 
 model workItems {
@@ -121,6 +131,8 @@ model More {
   title     String
   sub_title String
   links     String
+  User      User   @relation(fields: [user_id], references: [id])
+  user_id   Int    @unique
 }
 
 //MORE MODEL END HERE

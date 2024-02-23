@@ -23,3 +23,12 @@ export const ErrorMiddleWareGenerator =
       ErrorMessage({ res, message: `${err.message} internal Error message` });
     });
   };
+
+export const SuccessMessage = <T>(
+  res: Response,
+  statusCode = 200,
+  message: string,
+  data?: T
+) => {
+  res.status(statusCode).json({ status: true, message, data });
+};
