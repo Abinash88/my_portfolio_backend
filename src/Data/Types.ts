@@ -17,3 +17,12 @@ export type DataBaseDataTypes = {
   created_at: Date;
   updated_at: Date;
 };
+
+export type userTokenId = {
+  userName: string;
+  id: number;
+  iat: number;
+  exp: number;
+};
+
+
