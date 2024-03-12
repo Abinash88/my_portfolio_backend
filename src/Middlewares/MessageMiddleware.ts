@@ -20,7 +20,7 @@ export const ErrorMiddleWareGenerator =
   (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
   (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch((err) => {
-      ErrorMessage({ res, message: `${err.message} internal Error message` });
+      ErrorMessage({ res, message: `${err.message}` });
     });
   };
 
@@ -30,5 +30,5 @@ export const SuccessMessage = <T>(
   message: string,
   data?: T
 ) => {
-  res.status(statusCode).json({ status: true, message, data });
+  return res.status(statusCode).json({ status: true, message, data });
 };

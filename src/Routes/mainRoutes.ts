@@ -8,6 +8,7 @@ import {
 } from "../Middlewares/AuthValidation.js";
 import { ErrorMiddleWareGenerator } from "../Middlewares/MessageMiddleware.js";
 import FormDataController from "../Controllers/FormDataController.js";
+import { upload } from "../Middlewares/FormDataMiddleware.js";
 
 const authController = new AuthController();
 const formController = new FormDataController();
@@ -15,31 +16,39 @@ const formController = new FormDataController();
 router.post(
   "/login",
   LoginAuthValidatior,
-  authController.login,
-  ErrorMiddleWareGenerator
+  ErrorMiddleWareGenerator(authController.login.bind(authController))
 );
 
 router.post(
   "/signup",
   SignUpAuthValidator,
-  authController.signup,
-  ErrorMiddleWareGenerator
+  ErrorMiddleWareGenerator(authController.signup.bind(authController))
 );
 
 router.get(
   "/me",
   authController.setCheckAccessToken,
-  authController.me,
-  ErrorMiddleWareGenerator
+  ErrorMiddleWareGenerator(authController.me.bind(authController))
 );
-router.get("/logout", authController.logout, ErrorMiddleWareGenerator);
+
+router.get(
+  "/logout",
+  ErrorMiddleWareGenerator(authController.logout.bind(authController))
+);
+
+router.post(
+  "/refreshToken",
+  ErrorMiddleWareGenerator(
+    authController.refreshAccessToken.bind(authController)
+  )
+);
 
 router.post(
   "/home",
   HomeDataValidator,
   authController.setCheckAccessToken,
-  formController?.HomeData,
-  ErrorMiddleWareGenerator
+  upload.single("image"),
+  ErrorMiddleWareGenerator(formController?.HomeData.bind(formController))
 );
 
 export default router;

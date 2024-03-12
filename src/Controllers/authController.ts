@@ -85,32 +85,33 @@ class AuthController {
       });
     }
     //CHECK USER
-    console.log(data?.email);
+
     const checkUser = await this.checkUser(data?.email);
-    if (!checkUser.email)
-      return ErrorMessage({ res, message: "User Not Found!", statusCode: 400 });
+    if (checkUser) {
+      const ispasswordCorrect = await this.dcryptPassword(
+        data?.password,
+        checkUser.password
+      );
 
-    const ispasswordCorrect = await this.dcryptPassword(
-      data?.password,
-      checkUser.password
-    );
+      if (!ispasswordCorrect)
+        return ErrorMessage({
+          res,
+          message: "Password incorrect",
+          statusCode: 404,
+        });
 
-    if (!ispasswordCorrect)
-      return ErrorMessage({
+      const refresh_token = await this.getRefreshToken(
         res,
-        message: "Password incorrect",
-        statusCode: 404,
-      });
-
-    const refresh_token = await this.getRefreshToken(
-      res,
-      checkUser?.name,
-      checkUser?.id
-    );
-    const access_token = await this.getAccessToken(res, checkUser?.id);
-    this.setCookies(res, refresh_token, true, refreshToken);
-    this.setCookies(res, access_token, true, accessToken);
-    SuccessMessage(res, 200, "Successfully Logged In.");
+        checkUser?.name,
+        checkUser?.id
+      );
+      const access_token = await this.getAccessToken(res, checkUser?.id);
+      this.setCookies(res, refresh_token, true, refreshToken);
+      this.setCookies(res, access_token, true, accessToken);
+      SuccessMessage(res, 200, "Successfully Logged In.");
+    } else {
+      ErrorMessage({ res, message: "User Not Found!", statusCode: 400 });
+    }
   };
 
   //GET USER DATA LOGIC START
@@ -118,6 +119,7 @@ class AuthController {
     if (req.method !== "GET")
       return ErrorMessage({ res, message: "GET method only supported" });
     const userData = req?.body?.user;
+    console.log(userData);
     if (!userData)
       return ErrorMessage({ res, statusCode: 401, message: "User not found" });
     const getUser = await prisma.user.findFirst({
@@ -133,6 +135,12 @@ class AuthController {
         created_at: true,
         updated_at: true,
         image: true,
+        About: true,
+        Home: true,
+        languages: true,
+        More: true,
+        whyMe: true,
+        work: true,
       },
     });
 
@@ -172,7 +180,7 @@ class AuthController {
   //SET TOKEN INTHE COOKIES
   setCookies = async (
     res: Response,
-    token: string,
+    token: string | null,
     isSetCookie: boolean,
     tokenType: string
   ) => {
@@ -182,9 +190,9 @@ class AuthController {
         httpOnly: true,
         maxAge: isSetCookie ? 60 * 60 * 1000 : 0,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.log(err);
-      ErrorMessage({ res, message: err?.message });
+      ErrorMessage({ res, message: err.message });
     }
   };
 
@@ -193,7 +201,7 @@ class AuthController {
     const secretKey = process.env.ACCESS_TOKEN_SECRET;
     if (!secretKey) throw new Error("secret key is required");
     const accessToken = jwt.sign({ _id: id }, secretKey, {
-      expiresIn: 100 * 150,
+      expiresIn: "8m",
     });
     return accessToken;
   }
@@ -203,76 +211,71 @@ class AuthController {
     const secretKey = process.env.REFRESH_TOKEN_SECRET;
     if (!secretKey) throw new Error("secret key is required");
     const refreshToken = jwt.sign({ userName, id }, secretKey, {
-      expiresIn: 100 * 150,
+      expiresIn: "5m",
     });
     return refreshToken;
   };
 
-  refreshAccessToken = async (res: Response, req: Request) => {
-    const data = req.body;
-    const tokens = req?.cookies;
-    if (!tokens?.accessToken && !tokens?.refreshToken) {
-      const checkUser = await this.checkUser(data?.email);
-
-      //CHECK USER
-      if (!checkUser?.id)
-        return ErrorMessage({
-          statusCode: 400,
-          message: "User not found!",
-          res,
-        });
-
-      const refresh_token = await this.getRefreshToken(
-        res,
-        checkUser?.name,
-        checkUser?.id
-      );
-      this.setCookies(res, refresh_token, true, refreshToken);
-      const access_token = await this.getAccessToken(res, checkUser?.id);
-      this.setCookies(res, access_token, true, accessToken);
-    } else if (!tokens?.accessToken && tokens?.refreshToken) {
-      const secretKey = process.env.REFRESH_TOKEN_SECRET;
-      if (!secretKey)
-        ErrorMessage({ statusCode: 404, message: "Secret key not Found", res });
-      this.verifyTokens({
-        res,
-        secretKey,
-        getToken: tokens?.refreshToken,
-        req,
-      });
-    }
-  };
-
-  //CHEKCING THE ACCESS TOKEN MIDDLEWARE
-  setCheckAccessToken = async (
+  refreshAccessToken = async (
     req: Request,
     res: Response,
     next: NextFunction
   ) => {
-    const getToken = req?.cookies?.accessToken;
+    const tokens = req?.cookies;
 
-    if (!getToken) {
-      const checkRefreshToken = req?.cookies?.refreshToken;
-      if (!checkRefreshToken) {
-        return ErrorMessage({
-          res,
-          message: "Token Expired!",
-          statusCode: 404,
-        });
-      } else {
-        await this.refreshAccessToken(res, req);
-      }
+    if (!tokens?.refreshToken) {
+      return ErrorMessage({
+        statusCode: 403,
+        message: "Access denied!",
+        res,
+      });
     }
 
-    const secretKey = process.env.ACCESS_TOKEN_SECRET;
+    const secretKey = process.env.REFRESH_TOKEN_SECRET;
     if (!secretKey)
       return ErrorMessage({
-        res,
-        message: "Secret key not Found!",
         statusCode: 404,
+        message: "Secret key not Found",
+        res,
       });
 
-    this.verifyTokens({ res, secretKey, getToken, req });
+    this.verifyTokens({
+      res,
+      secretKey,
+      getToken: tokens?.refreshToken,
+      req,
+      next,
+    });
+
+    const userData = req?.body?.user;
+    const access_token = await this.getAccessToken(res, userData?.id);
+    this.setCookies(res, access_token, true, accessToken);
+    SuccessMessage(res, 200, "Access token is created successfully");
+  };
+
+  //CHEKCING THE ACCESS TOKEN MIDDLEWARE
+  setCheckAccessToken = (req: Request, res: Response, next: NextFunction) => {
+    const getToken = req?.cookies?.accessToken;
+    if (!getToken) {
+      const newError = new Error("Access token not found");
+      next(newError);
+    }
+    const accessSecret = process.env.ACCESS_TOKEN_SECRET;
+    if (!accessSecret) {
+      return ErrorMessage({
+        res,
+        message: "Secret Key Not Found!",
+        statusCode: 401,
+      });
+    }
+    this.verifyTokens({
+      res,
+      secretKey: accessSecret,
+      getToken,
+      req,
+      next,
+    });
+
     next();
   };
 
@@ -281,24 +284,22 @@ class AuthController {
     secretKey,
     getToken,
     req,
+    next,
   }: {
     res: Response;
     secretKey: string;
     getToken: string;
     req: Request;
+    next: NextFunction;
   }) => {
-    jwt.verify(getToken, secretKey, (err: Error, user: any) => {
-      if (err) {
-        console.log(err);
-        return ErrorMessage({
-          res,
-          message: err.message,
-          statusCode: 402,
-        });
-      } else {
-        req.body.user = user;
-      }
-    });
+    try {
+      const verify = jwt.verify(getToken, secretKey);
+      req.body.user = verify;
+    } catch (err: any) {
+      console.log(err.message, "jwt verify error");
+      res.status(403);
+      next(err);
+    }
   };
 }
 

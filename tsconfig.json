@@ -2,10 +2,12 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "strict": true,
     "target": "ES2017",
     "sourceMap": true,
     "outDir": "dist",
     "lib": ["ES2017"]
   },
   "include": ["src/**/*"]
+  
 }

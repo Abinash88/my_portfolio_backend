@@ -25,4 +25,9 @@ export type userTokenId = {
   exp: number;
 };
 
-
+export type HomeData = {
+  copy_email: string;
+  logo_name: string;
+  title: string;
+  description: string;
+};

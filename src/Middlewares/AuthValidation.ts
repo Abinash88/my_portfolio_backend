@@ -39,15 +39,16 @@ export const SignUpAuthValidator = [
 
 export const HomeDataValidator = [
   body("logo_name").notEmpty().withMessage(" Logo Name is required."),
-  body("title").notEmpty().withMessage(" Logo Name is required."),
+  body("title").notEmpty().withMessage("Title is required"),
   body("description")
     .notEmpty()
     .withMessage("Description is required.")
-    .isLength({ min: 50, max: 250 })
-    .withMessage("Description should be less than 50 and more than 250 char"),
+    .isLength({ min: 20, max: 250 })
+    .withMessage("Description should be more than 20 and less than 250 char"),
   body("copy_email")
     .notEmpty()
     .withMessage("Email is required")
     .isEmail()
     .withMessage("Invalid email address"),
+  body("image").notEmpty().withMessage("Image is required"),
 ];

@@ -65,22 +65,24 @@ class AuthController {
                 });
             }
             //CHECK USER
-            console.log(data === null || data === void 0 ? void 0 : data.email);
             const checkUser = await this.checkUser(data === null || data === void 0 ? void 0 : data.email);
-            if (!checkUser.email)
-                return ErrorMessage({ res, message: "User Not Found!", statusCode: 400 });
-            const ispasswordCorrect = await this.dcryptPassword(data === null || data === void 0 ? void 0 : data.password, checkUser.password);
-            if (!ispasswordCorrect)
-                return ErrorMessage({
-                    res,
-                    message: "Password incorrect",
-                    statusCode: 404,
-                });
-            const refresh_token = await this.getRefreshToken(res, checkUser === null || checkUser === void 0 ? void 0 : checkUser.name, checkUser === null || checkUser === void 0 ? void 0 : checkUser.id);
-            const access_token = await this.getAccessToken(res, checkUser === null || checkUser === void 0 ? void 0 : checkUser.id);
-            this.setCookies(res, refresh_token, true, refreshToken);
-            this.setCookies(res, access_token, true, accessToken);
-            SuccessMessage(res, 200, "Successfully Logged In.");
+            if (checkUser) {
+                const ispasswordCorrect = await this.dcryptPassword(data === null || data === void 0 ? void 0 : data.password, checkUser.password);
+                if (!ispasswordCorrect)
+                    return ErrorMessage({
+                        res,
+                        message: "Password incorrect",
+                        statusCode: 404,
+                    });
+                const refresh_token = await this.getRefreshToken(res, checkUser === null || checkUser === void 0 ? void 0 : checkUser.name, checkUser === null || checkUser === void 0 ? void 0 : checkUser.id);
+                const access_token = await this.getAccessToken(res, checkUser === null || checkUser === void 0 ? void 0 : checkUser.id);
+                this.setCookies(res, refresh_token, true, refreshToken);
+                this.setCookies(res, access_token, true, accessToken);
+                SuccessMessage(res, 200, "Successfully Logged In.");
+            }
+            else {
+                ErrorMessage({ res, message: "User Not Found!", statusCode: 400 });
+            }
         };
         //GET USER DATA LOGIC START
         this.me = async (req, res) => {
@@ -88,6 +90,7 @@ class AuthController {
             if (req.method !== "GET")
                 return ErrorMessage({ res, message: "GET method only supported" });
             const userData = (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.user;
+            console.log(userData);
             if (!userData)
                 return ErrorMessage({ res, statusCode: 401, message: "User not found" });
             const getUser = await prisma.user.findFirst({
@@ -103,6 +106,12 @@ class AuthController {
                     created_at: true,
                     updated_at: true,
                     image: true,
+                    About: true,
+                    Home: true,
+                    languages: true,
+                    More: true,
+                    whyMe: true,
+                    work: true,
                 },
             });
             SuccessMessage(res, 200, "Success", getUser);
@@ -142,7 +151,7 @@ class AuthController {
             }
             catch (err) {
                 console.log(err);
-                ErrorMessage({ res, message: err === null || err === void 0 ? void 0 : err.message });
+                ErrorMessage({ res, message: err.message });
             }
         };
         //GETTTING THE ACCESS TOKEN
@@ -151,64 +160,74 @@ class AuthController {
             if (!secretKey)
                 throw new Error("secret key is required");
             const refreshToken = jwt.sign({ userName, id }, secretKey, {
-                expiresIn: 100 * 150,
+                expiresIn: "5m",
             });
             return refreshToken;
         };
-        this.refreshAccessToken = async (res, req) => {
+        this.refreshAccessToken = async (req, res, next) => {
             var _a;
-            const data = req.body;
-            console.log(data);
-            const checkUser = await this.checkUser(data === null || data === void 0 ? void 0 : data.email);
-            //CHECK USER
-            if (!(checkUser === null || checkUser === void 0 ? void 0 : checkUser.id))
-                return ErrorMessage({ statusCode: 400, message: "User not found!", res });
-            if (!((_a = req === null || req === void 0 ? void 0 : req.cookies) === null || _a === void 0 ? void 0 : _a.refreshToken)) {
-                const refresh_token = await this.getRefreshToken(res, checkUser === null || checkUser === void 0 ? void 0 : checkUser.name, checkUser === null || checkUser === void 0 ? void 0 : checkUser.id);
-                this.setCookies(res, refresh_token, true, refreshToken);
+            const tokens = req === null || req === void 0 ? void 0 : req.cookies;
+            if (!(tokens === null || tokens === void 0 ? void 0 : tokens.refreshToken)) {
+                return ErrorMessage({
+                    statusCode: 403,
+                    message: "Access denied!",
+                    res,
+                });
             }
-            const access_token = await this.getAccessToken(res, checkUser === null || checkUser === void 0 ? void 0 : checkUser.id);
-            this.setCookies(res, access_token, true, accessToken);
-        };
-        //CHEKCING THE ACCESS TOKEN MIDDLEWARE
-        this.setCheckAccessToken = async (req, res, next) => {
-            var _a, _b;
-            const getToken = (_a = req === null || req === void 0 ? void 0 : req.cookies) === null || _a === void 0 ? void 0 : _a.accessToken;
-            if (!getToken) {
-                const checkRefreshToken = (_b = req === null || req === void 0 ? void 0 : req.cookies) === null || _b === void 0 ? void 0 : _b.refreshToken;
-                if (!checkRefreshToken) {
-                    return ErrorMessage({
-                        res,
-                        message: "Token Expired!",
-                        statusCode: 404,
-                    });
-                }
-                else {
-                    await this.refreshAccessToken(res, req);
-                    console.log("accesstoken refreshed");
-                }
-            }
-            const secretKey = process.env.ACCESS_TOKEN_SECRET;
+            const secretKey = process.env.REFRESH_TOKEN_SECRET;
             if (!secretKey)
                 return ErrorMessage({
-                    res,
-                    message: "Secret key not Found!",
                     statusCode: 404,
+                    message: "Secret key not Found",
+                    res,
                 });
-            jwt.verify(getToken, secretKey, (err, user) => {
-                if (err) {
-                    console.log(err);
-                    return ErrorMessage({
-                        res,
-                        message: err.message,
-                        statusCode: 402,
-                    });
-                }
-                else {
-                    req.body.user = user;
-                }
+            this.verifyTokens({
+                res,
+                secretKey,
+                getToken: tokens === null || tokens === void 0 ? void 0 : tokens.refreshToken,
+                req,
+                next,
+            });
+            const userData = (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.user;
+            const access_token = await this.getAccessToken(res, userData === null || userData === void 0 ? void 0 : userData.id);
+            this.setCookies(res, access_token, true, accessToken);
+            SuccessMessage(res, 200, "Access token is created successfully");
+        };
+        //CHEKCING THE ACCESS TOKEN MIDDLEWARE
+        this.setCheckAccessToken = (req, res, next) => {
+            var _a;
+            const getToken = (_a = req === null || req === void 0 ? void 0 : req.cookies) === null || _a === void 0 ? void 0 : _a.accessToken;
+            if (!getToken) {
+                const newError = new Error("Access token not found");
+                next(newError);
+            }
+            const accessSecret = process.env.ACCESS_TOKEN_SECRET;
+            if (!accessSecret) {
+                return ErrorMessage({
+                    res,
+                    message: "Secret Key Not Found!",
+                    statusCode: 401,
+                });
+            }
+            this.verifyTokens({
+                res,
+                secretKey: accessSecret,
+                getToken,
+                req,
+                next,
             });
             next();
+        };
+        this.verifyTokens = ({ res, secretKey, getToken, req, next, }) => {
+            try {
+                const verify = jwt.verify(getToken, secretKey);
+                req.body.user = verify;
+            }
+            catch (err) {
+                console.log(err.message, "jwt verify error");
+                res.status(403);
+                next(err);
+            }
         };
     }
     //GETTING THE ACCESS TOKEN
@@ -217,7 +236,7 @@ class AuthController {
         if (!secretKey)
             throw new Error("secret key is required");
         const accessToken = jwt.sign({ _id: id }, secretKey, {
-            expiresIn: 100 * 150,
+            expiresIn: "8m",
         });
         return accessToken;
     }

@@ -6,10 +6,10 @@ export const ErrorMessage = ({ statusCode = 500, message = "Internal Server Erro
 };
 export const ErrorMiddleWareGenerator = (fn) => (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch((err) => {
-        ErrorMessage({ res, message: `${err.message} internal Error message` });
+        ErrorMessage({ res, message: `${err.message}` });
     });
 };
 export const SuccessMessage = (res, statusCode = 200, message, data) => {
-    res.status(statusCode).json({ status: true, message, data });
+    return res.status(statusCode).json({ status: true, message, data });
 };
 //# sourceMappingURL=MessageMiddleware.js.map

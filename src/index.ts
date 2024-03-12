@@ -1,4 +1,4 @@
-import express, { urlencoded } from "express";
+import express, { NextFunction, urlencoded, Response, Request } from "express";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -7,6 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 import dotenv from "dotenv";
+import { ErrorMessage } from "./Middlewares/MessageMiddleware.js";
 
 dotenv.config();
 app.use(helmet());
@@ -17,8 +18,14 @@ app.use(cors({ origin: "*", credentials: true }));
 
 app.use("/api/v1/", router);
 
-app.get("/", (req, res) => {
+app.get("/", (_, res) => {
   res.json({ message: "hello world" });
+});
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  const statusCode = req.statusCode || 500;
+  const errorMessage = err.message || "Internal Server Error";
+  return ErrorMessage({ statusCode, message: errorMessage, res });
 });
 
 app.listen(PORT, () => {
